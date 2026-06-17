@@ -1,4 +1,6 @@
 {
-  "upstream": "pyupio/safety",
-  "version": "3.7.0"
+  "owner": "pyupio",
+  "repo": "safety",
+  "version": "",
+  "url": "https://github.com/pyupio/safety"
 }
