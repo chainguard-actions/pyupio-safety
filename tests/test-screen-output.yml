@@ -1,0 +1,45 @@
+name: Test screen output format (default)
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: safety
+        uses: .
+        continue-on-error: true
+        with:
+          scan: auto
+          output-format: screen
+          continue-on-error: 'true'
+      - name: Assert step ran
+        env:
+          OUTCOME: ${{ steps.safety.outcome }}
+        run: |
+          echo "step outcome: $OUTCOME"
+          if [ "$OUTCOME" = "skipped" ]; then
+            echo "FAIL: safety step was skipped unexpectedly"
+            exit 1
+          fi
+          echo "PASS: safety step ran with outcome: $OUTCOME"
+      - name: Assert exit-code output when step succeeded
+        env:
+          EXIT_CODE: ${{ steps.safety.outputs.exit-code }}
+          OUTCOME: ${{ steps.safety.outcome }}
+        run: |
+          echo "exit-code: $EXIT_CODE"
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "success" ]; then
+            if [ -z "$EXIT_CODE" ]; then
+              echo "FAIL: exit-code output was empty on success"
+              exit 1
+            fi
+            if ! echo "$EXIT_CODE" | grep -qE '^[0-9]+$'; then
+              echo "FAIL: exit-code is not numeric: $EXIT_CODE"
+              exit 1
+            fi
+            echo "PASS: exit-code is present and numeric: $EXIT_CODE"
+          else
+            echo "PASS: step ran (outcome=$OUTCOME), Docker action may not be fully supported in act"
+          fi

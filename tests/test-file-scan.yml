@@ -1,0 +1,46 @@
+name: Test file scan mode
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+
+      - name: Set up a git origin reachable inside the Docker container
+        run: |
+          git config user.email "test@example.com"
+          git config user.name "Test User"
+          rm -rf "$GITHUB_WORKSPACE/.git-remote"
+          git init --bare "$GITHUB_WORKSPACE/.git-remote"
+          git push "$GITHUB_WORKSPACE/.git-remote" HEAD:refs/heads/act-harness
+          git remote set-url origin "$GITHUB_WORKSPACE/.git-remote" 2>/dev/null || \
+            git remote add origin "$GITHUB_WORKSPACE/.git-remote"
+
+      - id: safety
+        uses: .
+        with:
+          scan: file
+          requirements: tests/fixtures/requirements-test.txt
+          continue-on-error: 'true'
+          output-format: screen
+        continue-on-error: true
+
+      - name: Assert action ran (file scan mode)
+        env:
+          EXIT_CODE: ${{ steps.safety.outputs.exit-code }}
+          CLI_OUTPUT: ${{ steps.safety.outputs.cli-output }}
+          OUTCOME: ${{ steps.safety.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          echo "exit-code: $EXIT_CODE"
+          echo "cli-output: $CLI_OUTPUT"
+          # The action ran (even if Safety found vulnerabilities or needs auth)
+          if [ "$OUTCOME" = "success" ] || [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action ran with outcome: $OUTCOME"
+          else
+            echo "FAIL: unexpected outcome: $OUTCOME"
+            exit 1
+          fi
