@@ -8,6 +8,7 @@ Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at
 
 | Version | Tag | Upstream commit |
 |---------|-----|-----------------|
+| 3.12.13 | [`3.12.13`](https://github.com/chainguard-actions/pyupio-safety/tree/3.12.13) | [`1b5a104`](https://github.com/pyupio/safety/commit/1b5a1045e8b3e6ed11257fba90fb18ec6e796be8) |
 | 3.7.0 | [`3.7.0`](https://github.com/chainguard-actions/pyupio-safety/tree/3.7.0) | — |
 | 3.8.1 | [`3.8.1`](https://github.com/chainguard-actions/pyupio-safety/tree/3.8.1) | [`ec3368a`](https://github.com/pyupio/safety/commit/ec3368a4f8239249088b77794d414526112e6aac) |
 
