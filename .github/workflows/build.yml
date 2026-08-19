@@ -1,0 +1,74 @@
+name: Publish Docker image
+
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+    - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+    - uses: actions/setup-python@7f4fc3e22c37d6ff65e88745f38bd3157c663f7c # v4
+      with:
+        python-version: "3.10"
+        cache: "pip"
+    
+    - name: Safety Version
+      run: |
+        pip install packaging
+        package_version=$(cat safety/VERSION)
+        echo $package_version
+        safe_version=$(printf '%s' "$package_version" | tr -d '\n\r')
+        echo "SAFETY_VERSION=$safe_version" >> "$GITHUB_ENV"
+
+    - name: Extract Major and Minor Version
+      run: |
+        python scripts/extract_version.py
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+      with:
+        driver-opts: |
+          image=moby/buildkit:v0.10.6
+
+    - name: Log into registry
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_ACTOR: ${{ github.actor }}
+      run: echo "$GITHUB_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+
+    - name: Docker meta
+      id: meta
+      uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5
+      with:
+        images: |
+          ghcr.io/pyupio/safety
+        tags: |
+          type=raw,value=${{ env.SAFETY_VERSION }},suffix=-{{ sha }}
+          type=raw,value=${{ env.SAFETY_VERSION }}
+          type=raw,value=${{ env.SAFETY_MAJOR_VERSION }}.${{ env.SAFETY_MINOR_VERSION }}
+          type=raw,value=${{ env.SAFETY_MAJOR_VERSION }}
+          type=raw,value=latest
+        labels: |
+          org.opencontainers.image.title=Safety CLI
+          org.opencontainers.image.description=Safety CLI is a Python dependency vulnerability scanner that enhances software supply chain security at every stage of development.
+          org.opencontainers.image.vendor=Safety Cybersecurity
+          org.opencontainers.image.licenses=MIT
+
+    - name: Build and Push image
+      uses: docker/build-push-action@0a97817b6ade9f46837855d676c4cca3a2471fc9 # v4
+      with:
+        context: .
+        push: true
+        cache-from: type=local,src=/tmp/.buildx-cache
+        cache-to: type=local,dest=/tmp/.buildx-cache-new
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        build-args: SAFETY_VERSION=${{ env.SAFETY_VERSION }} 
