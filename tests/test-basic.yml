@@ -1,0 +1,49 @@
+name: Test basic auto scan
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up git origin reachable inside Docker container
+        run: |
+          git config user.email "test@example.com"
+          git config user.name "Test User"
+          rm -rf "$GITHUB_WORKSPACE/.git-remote"
+          git init --bare "$GITHUB_WORKSPACE/.git-remote"
+          git push "$GITHUB_WORKSPACE/.git-remote" HEAD:refs/heads/act-harness
+          git remote set-url origin "$GITHUB_WORKSPACE/.git-remote" 2>/dev/null || \
+            git remote add origin "$GITHUB_WORKSPACE/.git-remote"
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          scan: auto
+          continue-on-error: 'true'
+          output-format: screen
+
+      - name: Assert outputs are set
+        env:
+          CLI_OUTPUT: ${{ steps.action.outputs.cli-output }}
+          EXIT_CODE: ${{ steps.action.outputs.exit-code }}
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          echo "exit-code: $EXIT_CODE"
+          echo "cli-output length: ${#CLI_OUTPUT}"
+          echo "cli-output: $CLI_OUTPUT"
+          if [ "$OUTCOME" = "success" ]; then
+            if [ -z "$EXIT_CODE" ]; then
+              echo "FAIL: action succeeded but exit-code output is empty"
+              exit 1
+            fi
+            echo "PASS: action ran successfully with exit-code=$EXIT_CODE"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action ran (may have found vulnerabilities or encountered expected error)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

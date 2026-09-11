@@ -50,7 +50,7 @@ outputs:
 
 runs:
   using: 'docker'
-  image: 'docker://pyupio/safety-v2-beta@sha256:a911aa6afee02c3cc4ff6a6a51c7bada392df8b775d32d22c2bdb3ef70040ec7' # latest
+  image: 'docker://pyupio/safety-v2-beta:latest@sha256:a911aa6afee02c3cc4ff6a6a51c7bada392df8b775d32d22c2bdb3ef70040ec7'
   env:
     SAFETY_API_KEY: ${{ inputs.api-key }}
     SAFETY_ACTION: true
